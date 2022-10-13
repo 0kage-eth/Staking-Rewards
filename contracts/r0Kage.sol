@@ -7,10 +7,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
  * @dev using openzeppelin library for ERC20 contract
  */
 
-contract rKageERC20 is ERC20{
-
-    constructor(string memory name, string memory symbol, uint256 tokenSupply) ERC20(name, symbol){
+contract r0Kage is ERC20 {
+    constructor(uint256 tokenSupply) ERC20("Rewards 0KAGE", "r0KAGE") {
         _mint(msg.sender, tokenSupply); // 1 million tokens minted to the owner
     }
-
 }

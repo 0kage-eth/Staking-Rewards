@@ -1,31 +1,49 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
 import { developmentChains, networkConfig } from "../helper-hardhat-config"
 import { verify } from "../utils/verify"
+import { GOERLI_ZEROKAGE_ADDRESS, TOTAL_REWARDS, REWARDS_PERIOD } from "../constants"
 
-const deploy0Kage = async (hre: HardhatRuntimeEnvironment) => {
+const deployStaking = async (hre: HardhatRuntimeEnvironment) => {
     const { deployments, ethers, getNamedAccounts, network } = hre
 
     const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()
     const chainId = (network.config.chainId || "31337").toString()
-    const args = ["ZeroKage", "0KAGE"]
-    log("Deploying 0Kage ERC20 token......")
-    log("---------------------------")
+    let zKageAddress
+    let rKageAddress
 
-    const deployTx = await deploy("ZeroKageERC20", {
+    if (developmentChains.includes(network.name)) {
+        log("Development chain detected.. ")
+        log("getting ZeroKage mock address")
+        const zKageContract = await ethers.getContract("ZeroKageMock")
+        zKageAddress = zKageContract.address
+    } else {
+        zKageAddress = GOERLI_ZEROKAGE_ADDRESS
+    }
+
+    // get rKage address -> need to deploy rKage contract before deploying staking contract
+    const rKageContract = await ethers.getContract("r0Kage")
+    rKageAddress = rKageContract.address
+
+    log("Deploying Staking Contract...")
+    const rewardsInWei = ethers.utils.parseEther(TOTAL_REWARDS)
+    const args = [zKageAddress, rKageAddress, REWARDS_PERIOD, rewardsInWei]
+
+    const deployTx = await deploy("StakingRewards", {
         from: deployer,
         log: true,
         args: args,
         waitConfirmations: networkConfig[chainId].blockConfirmations,
     })
 
-    if (!developmentChains.includes(network.name)) {
-        log("Verifying contract....")
+    log("---------------------------")
 
+    if (!developmentChains.includes(network.name)) {
+        log("Verifying Stakinng contract....")
         await verify(deployTx.address, args)
     }
 }
 
-export default deploy0Kage
+export default deployStaking
 
-deploy0Kage.tags = ["all", "0Kage"]
+deployStaking.tags = ["all", "Staking"]
