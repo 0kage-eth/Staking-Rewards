@@ -74,6 +74,10 @@ contract StakingRewards is Ownable {
         // first calculate rewards from prev time to current time
         calculateStakes();
 
+        // withdraw balance from staker
+        bool success = i_0Kage.transferFrom(msg.sender, address(this), stakeAmount);
+        require(success, "Failed to transfer tokens to staking contract");
+
         // next, update total supply and balance for user
         s_totalSupply += stakeAmount;
         s_balance[msg.sender] += stakeAmount;
@@ -98,6 +102,10 @@ contract StakingRewards is Ownable {
         console.log("calculating stakes at unstaking point");
         // first calculate rewards from prev time to current time
         calculateStakes();
+
+        // transfer balance back to staker
+        bool success = i_0Kage.transfer(msg.sender, unStakeAmount);
+        require(success, "Failed to seend tokens back to staker");
 
         // next, update total supply and balance for user
         s_totalSupply -= unStakeAmount;
@@ -182,6 +190,26 @@ contract StakingRewards is Ownable {
 
     function getStakerReward(address staker) public view returns (uint256) {
         return s_rewards[staker];
+    }
+
+    /**
+     * @notice this function returns accrued rewards assuming user unstakes right now
+     * @notice until a staker unstakes, user will not be able to redeem rewards
+     * @notice this function calculates only accrued rewards that will become redeemable
+     * @notice once user unstakes
+     */
+    function getStakerAccruedRewards() public view returns (uint256 accruedRewards) {
+        uint256 rewardsPerToken = s_rewardsPerToken +
+            (
+                s_totalSupply == 0
+                    ? 0
+                    : (s_totalRewards * (block.timestamp - s_lastUpdate)) / s_totalSupply
+            );
+
+        accruedRewards =
+            s_rewards[msg.sender] +
+            (s_balance[msg.sender] * (rewardsPerToken - s_rewardsPaidPerUser[msg.sender])) /
+            s_duration;
     }
 
     function getStakingBalance(address staker) public view returns (uint256) {
