@@ -36,19 +36,6 @@ import { moveBlocks } from "../../utils/moveBlocks"
               zKageContract = await ethers.getContract("ZeroKageMock", deployer)
               rKageContract = await ethers.getContract("r0Kage", deployer)
 
-              const rewardsAllocation = ethers.utils.parseEther("250000")
-              const transferRewardstx = await rKageContract.transfer(
-                  stakingContract.address,
-                  rewardsAllocation
-              )
-              await transferRewardstx.wait(1)
-
-              const approveRewardUsageTx = await rKageContract.approve(
-                  stakingContract.address,
-                  rewardsAllocation
-              )
-              await approveRewardUsageTx.wait(1)
-
               transferAmount = ethers.utils.parseEther("1000")
               stakeAmount = ethers.utils.parseEther("100")
           })
@@ -88,10 +75,9 @@ import { moveBlocks } from "../../utils/moveBlocks"
                   await transferTx.wait(1)
 
                   // approve usage of 1000 0Kage tokens for staking rewards contract
-                  const approveTx = await zKageContract.approve(
-                      stakingContract.address,
-                      transferAmount
-                  )
+                  const approveTx = await zKageContract
+                      .connect(staker1)
+                      .approve(stakingContract.address, transferAmount)
 
                   // shift 100 seconds of blockchain & moves chain by 1 block
                   shiftTimeWithoutMiningBlock(100)
@@ -154,10 +140,9 @@ import { moveBlocks } from "../../utils/moveBlocks"
                   await transferTx.wait(1)
 
                   // approve usage of 1000 0Kage tokens for staking
-                  const approveTx = await zKageContract.approve(
-                      stakingContract.address,
-                      stakeAmount
-                  )
+                  const approveTx = await zKageContract
+                      .connect(staker1)
+                      .approve(stakingContract.address, stakeAmount)
                   await approveTx.wait(1)
 
                   // shift 100 seconds of blockchain
@@ -229,17 +214,17 @@ import { moveBlocks } from "../../utils/moveBlocks"
 
               let poolRewardsBeforeWithdraw = BigNumber.from("0")
               let poolRewardsAfterWithdraw = BigNumber.from("0")
-
+              transferAmount = ethers.utils.parseEther("500")
+              stakeAmount = ethers.utils.parseEther("100")
               beforeEach(async () => {
                   // staker1 is transfered 1000 0Kage
                   const transferTx = await zKageContract.transfer(staker1.address, transferAmount)
                   await transferTx.wait(1)
 
                   // approve staking contract to use staker1 tokens
-                  const approveTx = await zKageContract.approve(
-                      stakingContract.address,
-                      stakeAmount
-                  )
+                  const approveTx = await zKageContract
+                      .connect(staker1)
+                      .approve(stakingContract.address, stakeAmount)
                   await transferTx.wait(1)
 
                   // staker 1 stakes at 100 seconds for 100 0Kage
@@ -253,17 +238,18 @@ import { moveBlocks } from "../../utils/moveBlocks"
                   const unstakeTx = await stakingContract.connect(staker1).unstake(stakeAmount)
                   // 1 more second is added on wait
                   await unstakeTx.wait(1)
-
+                  poolRewardsBeforeWithdraw = await rKageContract.balanceOf(stakingContract.address)
                   // staker 1 withdraws reward
                   const withdrawRewardTx = await stakingContract.connect(staker1).distributeReward()
                   await withdrawRewardTx.wait(1)
+                  poolRewardsAfterWithdraw = await rKageContract.balanceOf(stakingContract.address)
               })
 
               it("Check 0Kage/rKage in staker 1 account after first withdrawal", async () => {
                   const rkageBalance = await rKageContract.balanceOf(staker1.address)
                   // calculated Balance -> again refer to calculations in
                   // https://docs.google.com/spreadsheets/d/16ZJXNlzb1l0tKiUDbVhNFI3tTf3rnWJPq0iUU2K1L98/edit?usp=sharing
-                  const calculatedBalance = ethers.utils.parseEther("0.792744799594114")
+                  const calculatedBalance = ethers.utils.parseEther("0.7927447995941146")
 
                   expect(rkageBalance.toString().substring(0, 15)).equals(
                       calculatedBalance.toString().substring(0, 15),
@@ -277,13 +263,15 @@ import { moveBlocks } from "../../utils/moveBlocks"
                   )
               })
 
-              it("Check 0Kage balance in rewards contract after first withdrawal", async () => {
-                  const rkageBalance = await rKageContract.balanceOf(stakingContract.address)
-                  console.log("rkage balance", rkageBalance.toString())
-                  const calculatedBalance = ethers.utils.parseEther("0.792744799594114")
-                  const rewardsAllocation = ethers.utils.parseEther("250000")
-                  expect(rkageBalance.add(calculatedBalance)).equals(
-                      rewardsAllocation,
+              it("Check 0Kage balance in staking contract after first withdrawal", async () => {
+                  const calculatedBalance = ethers.utils.parseEther("0.7927447995941146")
+                  expect(
+                      poolRewardsBeforeWithdraw
+                          .sub(poolRewardsAfterWithdraw)
+                          .toString()
+                          .substring(0, 15)
+                  ).equals(
+                      calculatedBalance.toString().substring(0, 15),
                       "Diff in pool balance should be equal to rewards transffered to staker1"
                   )
               })
@@ -298,25 +286,24 @@ import { moveBlocks } from "../../utils/moveBlocks"
                   )
                   transferTx.wait(1)
                   // give approval to stake with staking rewards contract
-                  const arpproveTx = await zKageContract.approve(
-                      stakingContract.address,
-                      ethers.utils.parseEther("1000")
-                  )
+                  const arpproveTx = await zKageContract
+                      .connect(staker1)
+                      .approve(stakingContract.address, ethers.utils.parseEther("1000"))
                   arpproveTx.wait(1)
 
                   // transfer 250k rKage tokens to stakingContract
-                  const rewards = ethers.utils.parseEther("250000")
-                  const transferRewardsTx = await rKageContract.transfer(
-                      stakingContract.address,
-                      rewards
-                  )
-                  await transferRewardsTx.wait(1)
+                  //   const rewards = ethers.utils.parseEther("250000")
+                  //   const transferRewardsTx = await rKageContract.transfer(
+                  //       stakingContract.address,
+                  //       rewards
+                  //   )
+                  //   await transferRewardsTx.wait(1)
 
                   // give approval to spend
-                  const approveRewardsTx = await rKageContract.approve(
-                      stakingContract.address,
-                      rewards
-                  )
+                  //   const approveRewardsTx = await rKageContract.approve(
+                  //       stakingContract.address,
+                  //       rewards
+                  //   )
               })
 
               it("stake event emitted", async () => {
@@ -369,25 +356,24 @@ import { moveBlocks } from "../../utils/moveBlocks"
                   )
                   transferTx.wait(1)
                   // give approval to stake with staking rewards contract
-                  const arpproveTx = await zKageContract.approve(
-                      stakingContract.address,
-                      ethers.utils.parseEther("1000")
-                  )
+                  const arpproveTx = await zKageContract
+                      .connect(staker1)
+                      .approve(stakingContract.address, ethers.utils.parseEther("1000"))
                   arpproveTx.wait(1)
 
-                  // transfer 250k rKage tokens to stakingContract
-                  const rewards = ethers.utils.parseEther("250000")
-                  const transferRewardsTx = await rKageContract.transfer(
-                      stakingContract.address,
-                      rewards
-                  )
-                  await transferRewardsTx.wait(1)
+                  //   // transfer 250k rKage tokens to stakingContract
+                  //   const rewards = ethers.utils.parseEther("250000")
+                  //   const transferRewardsTx = await rKageContract.transfer(
+                  //       stakingContract.address,
+                  //       rewards
+                  //   )
+                  //   await transferRewardsTx.wait(1)
 
-                  // give approval to spend
-                  const approveRewardsTx = await rKageContract.approve(
-                      stakingContract.address,
-                      rewards
-                  )
+                  //   // give approval to spend
+                  //   const approveRewardsTx = await rKageContract.approve(
+                  //       stakingContract.address,
+                  //       rewards
+                  //   )
               })
 
               it("Add stake amount > 0Kage balance", async () => {
@@ -409,7 +395,7 @@ import { moveBlocks } from "../../utils/moveBlocks"
 
                   await expect(
                       stakingContract.connect(staker1).unstake(unstakeAmount)
-                  ).to.be.revertedWith("Amount to be unstaked exceeds your staked balance")
+                  ).to.be.revertedWith("Amount to unstake exceeds your staked balance")
               })
           })
       })

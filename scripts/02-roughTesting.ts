@@ -5,10 +5,12 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { ethers, network } from "hardhat"
 import { R0Kage, StakingRewards, ZeroKageMock } from "../typechain-types"
+import { TOTAL_REWARDS } from "../constants"
 
 const myAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 const main = async () => {
+    const rewardsInWei = ethers.utils.parseEther(TOTAL_REWARDS)
     const accounts: SignerWithAddress[] = await ethers.getSigners()
     const zKageContract: ZeroKageMock = await ethers.getContract(
         "ZeroKageMock",

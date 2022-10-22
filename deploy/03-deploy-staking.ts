@@ -45,13 +45,12 @@ const deployStaking = async (hre: HardhatRuntimeEnvironment) => {
     }
 
     // assign all tokens to Staking rewardds
-    log("Transferring rewards to Staking rewards")
+    log("Transferring rewards to Staking contract")
     const transferTx = await rKageContract.transfer(deployTx.address, rewardsInWei)
     await transferTx.wait(1)
 
     // give approval to StakingRewards contract to use r0Kage
     log("Giving permissions to Staking Rewards contract to use r0Kage reward tokens")
-    const rKageBalance = await rKageContract.totalSupply()
     const approveTx = await rKageContract.approve(deployTx.address, rewardsInWei)
     await approveTx.wait(1)
 }
